@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATC Royal Receipt - Final Fix</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Montserrat:wght@500;700&display=swap" rel="stylesheet">
+    <!-- html2pdf Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- PWA Meta Tags -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#e91e63">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="apple-touch-icon" href="images/logo-192.png">
+</head>
+<body>
+
+<div class="main-container">
+    <!-- Sirf ye div PDF mein jayega -->
+    <div id="receipt" class="receipt-wrapper">
+        <div class="royal-inner-border">
+            
+            <div class="top-contacts">
+                <div class="contact-l">
+                    <p class="owner-name">Munna Bhai</p>
+                    <p>9673732113 | 9622247911</p>
+                </div>
+                <div class="contact-r">
+                    <p class="owner-name">Asif Bhai</p>
+                    <p>7030732113 | 8888664019</p>
+                </div>
+            </div>
+
+            <header class="branding-header">
+                <div class="header-side-box">
+                    <img src="images/Truck.png" class="truck-logo-main" alt="Truck">
+                </div>
+                <div class="header-center-box">
+                    <div class="atc-letter-boxes">
+                        <span class="l-box orange">A</span><span class="l-box green">T</span><span class="l-box orange">C</span>
+                    </div>
+                    <h1 class="main-company-title">ALLINDIA TRANSPORT COMPANY</h1>
+                    <h2 class="category-title">VEGETABLE SUPPLIERS</h2>
+                    <p class="agent-tag">Transport, Contractor & Commission Agent</p>
+                </div>
+                <div class="header-side-box text-right">
+                    <img src="images/basket_top.png" class="small-basket-top">
+                </div>
+            </header>
+
+            <div class="pink-bar">
+                <div class="v-box">VEHICLE NO: <input type="text" id="vehicleNo" placeholder="MH 20 AB 1234" class="filled-field"></div>
+                <div class="d-box">DATE: <input type="text" id="date" class="filled-field"></div>
+            </div>
+
+            <form id="receiptForm">
+                <div class="form-body">
+                    <div class="party-row">
+                        <label>Party Name :</label>
+                        <input type="text" id="partyName" class="party-input filled-field" placeholder="ENTER PARTY NAME">
+                    </div>
+
+                    <div class="details-grid">
+                        <div class="col">
+                            <div class="f-line"><label class="lbl-blue">From</label><input type="text" id="from" class="filled-field"></div>
+                            <div class="f-line"><label class="lbl-green">Lorry Owner</label><input type="text" id="lorryOwner" class="txt-green filled-field"></div>
+                            <div class="f-line"><label class="lbl-red">Village</label><input type="text" id="ownerVillage" class="txt-red filled-field"></div>
+                            <div class="f-line"><label class="lbl-purple">Driver Name</label><input type="text" id="driverName" class="txt-purple filled-field"></div>
+                            <div class="f-line"><label class="lbl-blue-lt">Village</label><input type="text" id="driverVillage" class="txt-blue-lt filled-field"></div>
+                        </div>
+                        <div class="col">
+                            <div class="f-line"><label class="lbl-blue">To</label><input type="text" id="to" class="filled-field"></div>
+                            <div class="f-line"><label class="lbl-orange">Mob No.</label><input type="number" id="ownerMob" class="txt-orange filled-field"></div>
+                            <div class="f-line spacer"></div>
+                            <div class="f-line"><label class="lbl-pink">Mob No.</label><input type="number" id="driverMob" class="txt-pink filled-field"></div>
+                            <div class="f-line"><label class="lbl-gold">Licence No.</label><input type="text" id="licenceNo" class="txt-gold filled-field"></div>
+                        </div>
+                    </div>
+
+                    <div class="calc-section">
+                        <div class="table-wrap">
+                            <table class="math-table">
+                                <tr><td class="lbl-pink">Rate (₹ Per Ton)</td><td><input type="number" id="rate" class="calc-in txt-orange filled-field"></td></tr>
+                                <tr><td class="lbl-blue">Weight (KG)</td><td><input type="number" step="0.001" id="weight" class="calc-in txt-blue-dk filled-field"></td></tr>
+                                <tr class="highlight-gold"><td class="lbl-gold">Total Freight (₹)</td><td><input type="text" id="freight" readonly class="txt-gold filled-field"></td></tr>
+                                <tr><td class="lbl-red">Advance (₹)</td><td><input type="number" id="advance" class="calc-in txt-red filled-field"></td></tr>
+                                <tr><td class="lbl-green">Timing (HR)</td><td><input type="text" id="timing" class="txt-green filled-field"></td></tr>
+                                <tr><td class="lbl-purple">Driver Price (+)</td><td><input type="number" id="driverPrice" class="calc-in txt-purple filled-field"></td></tr>
+                                <tr class="highlight-pink"><td class="lbl-pink">To Pay (₹)</td><td><input type="text" id="toPay" readonly class="txt-pink filled-field"></td></tr>
+                            </table>
+                        </div>
+                        <div class="img-wrap">
+                            <img src="images/veg_basket.png" class="side-basket-img">
+                        </div>
+                    </div>
+
+                    <div class="note-box">
+                        <b>Note :-</b> Inform us of non-receipt within 7 days. Accident/Loss is owner's responsibility. Driver Price is added (+) to balance.
+                    </div>
+
+                    <div class="signature-row">
+                        <div class="sig-box">Driver Sign.</div>
+                        <div class="sig-box relative">
+                            <img src="images/Sign.png" class="sign-png-image">
+                            <p class="sign-line">Sign. ________________</p>
+                            <div class="atc-signature-logo">
+                                <span>A</span><span>T</span><span>C</span>
+                                <p>ALLINDIA TRANSPORT COMPANY</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+
+            <footer class="footer-strip">
+                Add : Aurangabad Office : Solapur-Dhule Road, Gut No. 102, Fatiyabad, Aurangabad (MH) 431002
+            </footer>
+        </div>
+    </div>
+
+    <!-- Submit Button Outside PDF Area -->
+    <div class="btn-wrap">
+        <button type="submit" form="receiptForm" id="saveBtn">FINALIZE & DOWNLOAD PDF</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #333; padding: 20px 0; display: flex; flex-direction: column; align-items: center; font-family: 'Montserrat', sans-serif; }
+
+.main-container { width: 800px; }
+
+.receipt-wrapper { 
+    background: #FFFCF8; 
+    width: 800px; 
+    padding: 10px; 
+    overflow: hidden;
+    position: relative;
+}
+
+.royal-inner-border { border: 2.5px double #c2185b; padding: 10px 0 0 0; }
+
+.top-contacts { display: flex; justify-content: space-between; padding: 0 20px; color: #c2185b; font-weight: bold; font-size: 12px; }
+.owner-name { font-family: 'Playfair Display', serif; font-size: 15px; }
+
+.branding-header { display: flex; align-items: center; justify-content: space-between; padding: 5px 20px; }
+.truck-logo-main { width: 140px; }
+.small-basket-top { width: 80px; }
+
+.atc-letter-boxes { margin-bottom: 3px; }
+.l-box { border: 2px solid #d4af37; padding: 0 8px; font-size: 28px; font-family: 'Playfair Display', serif; font-weight: 900; margin: 0 2px; display: inline-block; background: #fff; }
+.orange { color: #d35400; } .green { color: #27ae60; }
+
+.main-company-title { font-family: 'Playfair Display', serif; font-size: 22px; color: #900C3F; }
+.category-title { font-family: 'Playfair Display', serif; font-size: 16px; color: #c2185b; border-bottom: 2px solid #d4af37; display: inline-block; padding: 0 10px; }
+.agent-tag { font-size: 10px; font-weight: bold; color: #666; }
+
+.pink-bar { background: #e91e63; color: #fff; padding: 8px 20px; display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; margin-top: 10px; }
+.pink-bar input { background: transparent; border: none; color: #fff; outline: none; width: 150px; }
+
+.party-row { padding: 10px 20px; color: #c2185b; font-weight: bold; font-size: 16px; }
+.party-input { border: none; border-bottom: 2px solid #03a9f4; width: 75%; outline: none; margin-left: 10px; background: transparent; }
+
+.details-grid { display: flex; padding: 0 20px; gap: 20px; }
+.col { flex: 1; }
+.f-line { display: flex; border-bottom: 1px solid #ccc; margin-bottom: 8px; align-items: center; height: 25px; }
+.f-line label { width: 100px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+.f-line input { border: none; background: transparent; outline: none; width: 100%; font-size: 13px; }
+.spacer { border: none; height: 10px; }
+
+.lbl-blue { color: #1a5276; } .lbl-green { color: #1d8348; } .lbl-red { color: #943126; } .lbl-purple { color: #633974; } .lbl-pink { color: #c2185b; } .lbl-gold { color: #9a7d0a; } .lbl-orange { color: #a04000; }
+.txt-green { color: #1d8348; } .txt-red { color: #943126; } .txt-purple { color: #633974; } .txt-pink { color: #c2185b; } .txt-gold { color: #9a7d0a; }
+
+.calc-section { display: flex; padding: 10px 20px; gap: 15px; align-items: flex-start; }
+.math-table { width: 100%; border-collapse: collapse; background: #fff; border: 1.5px solid #03a9f4; }
+.math-table td { border: 1.5px solid #03a9f4; padding: 6px; font-weight: bold; font-size: 13px; }
+.math-table input { border: none; outline: none; width: 100%; text-align: right; }
+.highlight-gold { background: #fef9e7; }
+.highlight-pink { background: #fdedec; }
+
+.side-basket-img { width: 100%; max-width: 260px; }
+
+.note-box { padding: 5px 20px; font-size: 10px; color: #555; border-top: 1px dashed #ccc; line-height: 1.3; }
+
+.signature-row { display: flex; justify-content: space-between; padding: 15px 20px 5px 20px; color: #c2185b; font-weight: bold; align-items: flex-end; }
+.relative { position: relative; width: 220px; text-align: right; }
+.sign-png-image { position: absolute; width: 90px; top: -35px; right: 10px; pointer-events: none; }
+.sign-line { border-top: 1px solid #444; padding-top: 3px; font-size: 14px; }
+.atc-signature-logo span { border: 1px solid #c2185b; padding: 0 4px; font-size: 12px; margin: 0 1px; }
+.atc-signature-logo p { font-size: 9px; margin-top: 2px; }
+
+.footer-strip { background: #e91e63; color: #fff; text-align: center; font-size: 10px; padding: 8px; font-weight: bold; margin-top: 10px; }
+
+.btn-wrap { padding: 20px; width: 100%; }
+#saveBtn { width: 100%; padding: 18px; background: #27ae60; color: #fff; border: none; font-weight: 900; font-size: 18px; cursor: pointer; border-radius: 5px; }
+
+.filled-field { font-weight: 700 !important; text-transform: uppercase; }
+
+/* Important for PDF scaling */
+#receipt { page-break-inside: avoid; transform-origin: top left; }
