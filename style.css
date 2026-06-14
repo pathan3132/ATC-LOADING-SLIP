@@ -71,3 +71,59 @@ body { background: #333; padding: 20px 0; display: flex; flex-direction: column;
 
 /* Important for PDF scaling */
 #receipt { page-break-inside: avoid; transform-origin: top left; }
+
+/* Sabse pehle body ke default flex ko handle karein */
+@media (max-width: 820px) {
+    body {
+        display: block !important; /* Flexbox ko band karein */
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #333;
+        width: 100%;
+        overflow-x: hidden; /* Side scroll bilkul khatam */
+    }
+
+    .main-container {
+        position: relative;
+        width: 800px; /* Form ki asli width */
+        margin: 0 !important; /* Centering hatao */
+        
+        /* Mobile screen ke hisaab se scale calculate karega */
+        /* Agar screen 400px ki hai toh ye 0.5 scale kar dega */
+        transform: scale(calc(window.innerWidth / 800)); 
+        transform: scale(calc(100vw / 805)); 
+        
+        transform-origin: top left; /* Sabse important: scaling left corner se shuru hogi */
+        left: 0;
+    }
+
+    .receipt-wrapper {
+        margin: 0 !important;
+        border: none !important;
+    }
+
+    /* Button area ko mobile par bada aur touch friendly banayein */
+    .btn-wrap {
+        width: 800px;
+        padding: 40px 20px;
+        background: #333;
+    }
+
+    #saveBtn {
+        width: 100%;
+        font-size: 35px !important;
+        padding: 30px !important;
+        height: auto !important;
+        border-radius: 10px;
+        background: #27ae60 !important;
+    }
+}
+
+/* PDF generate karte waqt scaling ko normal karein */
+@media print {
+    .main-container {
+        transform: none !important;
+        width: 800px !important;
+        position: static !important;
+    }
+}

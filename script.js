@@ -91,10 +91,11 @@ document.getElementById('receiptForm').addEventListener('submit', async (e) => {
                 scale: 2, 
                 useCORS: true, 
                 letterRendering: true,
-                scrollY: 0
+                scrollY: 0,
+                windowWidth: 800 // Mobile par hote hue bhi 'canvas' 800px hi maanega
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: 'avoid-all' } // Sabse important line cutting rokne ke liye
+            pagebreak: { mode: 'avoid-all' }
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
