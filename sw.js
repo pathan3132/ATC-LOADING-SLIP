@@ -1,18 +1,14 @@
-const CACHE_NAME = 'atc-receipt-v1';
+const CACHE_NAME = 'atc-app-v7';
 const urlsToCache = [
-  '/',
-  'index.html',
-  'style.css',
-  'script.js',
-  'manifest.json',
-  'images/Truck.png',
-  'images/veg_basket.png'
+  './index.html',
+  './style.css',
+  './script.js',
+  './manifest.json',
+  './Images/ATC_Logo.png'
 ];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
 });
 
 self.addEventListener('fetch', event => {

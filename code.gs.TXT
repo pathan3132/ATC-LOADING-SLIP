@@ -1,0 +1,182 @@
+// ================= NAYE CREDENTIALS SET =================
+var SHEET_ID = "1DUks_QNCvNZ04ezXofQvTdmvujnq1fi9gVbhPhm9Yk4";
+var SLIP_FOLDER_ID = "1jfIAXxKlwWuEEtR8l-rJgqpWEPU_5JF0";
+var APP_PASSWORD = "1234";
+
+function isAuthorized(pass) {
+  return String(pass || "").trim() === APP_PASSWORD;
+}
+
+// 🟢 DRIVE, SLIP FOLDER & SHEET TESTER (Editor me Run karke check karein)
+function testDriveAndSheetAccess() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  Logger.log("✅ Google Sheet Connected: " + ss.getName());
+
+  var slipFolder = DriveApp.getFolderById(SLIP_FOLDER_ID);
+  Logger.log("✅ Slip Folder Connected: " + slipFolder.getName());
+  
+  var testFile = slipFolder.createFile("Test_Slip.txt", "Slip folder is working!");
+  Logger.log("✅ Test slip file created in Drive: " + testFile.getUrl());
+}
+
+function doGet(e) {
+  try {
+    if (!e || !e.parameter) return jsonResponse({ error: "No params" });
+    var action = e.parameter.action;
+
+    if (!isAuthorized(e.parameter.pass)) {
+      return jsonResponse({ error: "Unauthorized", authError: true });
+    }
+
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+
+    // 1. GET VEHICLES (Autocomplete)
+    if (action === "getVehicles") {
+      var sheet = ss.getSheetByName("Data_log");
+      if (!sheet || sheet.getLastRow() <= 1) return jsonResponse([]);
+      var values = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues(); 
+      var vehicles = [...new Set(values.map(r => r[0].toString().trim().toUpperCase()))].filter(v => v !== "");
+      return jsonResponse(vehicles.sort());
+    }
+
+    // 2. VEHICLE PROFILE AUTO-FILL
+    if (action === "getVehicleProfile") {
+      var profileSheet = ss.getSheetByName("Vehicle_Profile");
+      if (!profileSheet || profileSheet.getLastRow() < 2) return jsonResponse({});
+      var pData = profileSheet.getDataRange().getValues();
+      var searchVNo = (e.parameter.vNo || "").trim().toUpperCase();
+      for (var i = 1; i < pData.length; i++) {
+        if (String(pData[i][0]).trim().toUpperCase() === searchVNo) {
+          return jsonResponse({
+            lOwner: pData[i][1] || "",
+            oVillage: pData[i][2] || "",
+            oMob: pData[i][3] || "",
+            dName: pData[i][4] || "",
+            dVillage: pData[i][5] || "",
+            dMob: pData[i][6] || "",
+            licence: pData[i][7] || ""
+          });
+        }
+      }
+      return jsonResponse({});
+    }
+
+    // 3. LIST SLIPS (ARCHIVE)
+    if (action === "listSlips") {
+      var archiveSheet = ss.getSheetByName("Slip_Archive");
+      if (!archiveSheet || archiveSheet.getLastRow() < 2) return jsonResponse([]);
+      var data = archiveSheet.getDataRange().getValues();
+      var list = [];
+      
+      for (var i = 1; i < data.length; i++) {
+        var row = data[i];
+        if (!row[0] && !row[1] && !row[4]) continue;
+        
+        var dateStr = "";
+        try {
+          if (row[2] instanceof Date) {
+            dateStr = Utilities.formatDate(row[2], "GMT+5:30", "dd-MM-yyyy");
+          } else if (row[2]) {
+            var dObj = new Date(row[2]);
+            dateStr = !isNaN(dObj.getTime()) ? Utilities.formatDate(dObj, "GMT+5:30", "dd-MM-yyyy") : String(row[2]);
+          }
+        } catch (eDate) { dateStr = String(row[2] || ""); }
+
+        list.push({
+          rowNumber: i + 1,
+          name: String(row[0] || "Loading Slip"),
+          id: String(row[1] || ""),
+          date: dateStr,
+          url: String(row[3] || "#"),
+          formData: String(row[4] || "")
+        });
+      }
+      list.reverse();
+      return jsonResponse(list);
+    }
+
+    return jsonResponse([]);
+  } catch (err) {
+    return jsonResponse({ error: err.toString() });
+  }
+}
+
+function doPost(e) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  try {
+    if (!e || !e.postData || !e.postData.contents) return jsonResponse({ success: false, error: "No post data" });
+    var data = JSON.parse(e.postData.contents);
+
+    if (!isAuthorized(data.pass)) return jsonResponse({ success: false, error: "Unauthorized" });
+
+    // SAVE LOADING SLIP
+    if (data.action === "saveLoadingSlip") {
+      var vNo = String(data.vNo || "").toUpperCase().trim();
+      var slipFolder;
+      try { slipFolder = DriveApp.getFolderById(SLIP_FOLDER_ID); } catch(e) { slipFolder = DriveApp.getRootFolder(); }
+
+      var fileName = "Slip_" + vNo + "_" + String(data.date || "").replace(/\//g, '-') + ".pdf";
+      var cleanBase64 = String(data.pdfBase64 || "");
+      if (cleanBase64.indexOf(",") !== -1) cleanBase64 = cleanBase64.split(",")[1];
+      cleanBase64 = cleanBase64.replace(/\s/g, '');
+
+      var file;
+      var fileId = "";
+      var fileUrl = "";
+
+      if (cleanBase64 && cleanBase64.length > 50) {
+        var decoded = Utilities.base64Decode(cleanBase64);
+        var pdfBlob = Utilities.newBlob(decoded, "application/pdf", fileName);
+        file = slipFolder.createFile(pdfBlob);
+        try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(shErr) {}
+        fileId = file.getId();
+        fileUrl = file.getUrl();
+      }
+
+      var dataForJson = {};
+      for (var k in data) { if (k !== "pdfBase64") dataForJson[k] = data[k]; }
+      var savedJson = JSON.stringify(dataForJson);
+
+      var archiveSheet = ss.getSheetByName("Slip_Archive") || ss.insertSheet("Slip_Archive");
+      if (archiveSheet.getLastRow() === 0) {
+        archiveSheet.appendRow(["File Name", "File ID", "Date", "File URL", "Form Data"]);
+      }
+
+      var editRow = parseInt(data.archiveRow);
+      if (editRow > 1) {
+        var oldFileId = archiveSheet.getRange(editRow, 2).getValue();
+        try { if (oldFileId) DriveApp.getFileById(oldFileId).setTrashed(true); } catch (e) {}
+        archiveSheet.getRange(editRow, 1, 1, 5).setValues([[fileName, fileId, new Date(), fileUrl, savedJson]]);
+      } else {
+        archiveSheet.appendRow([fileName, fileId, new Date(), fileUrl, savedJson]);
+      }
+
+      saveVehicleProfile(ss, data);
+      return jsonResponse({ success: true, fileUrl: fileUrl, fileId: fileId });
+    }
+
+  } catch (err) {
+    return jsonResponse({ success: false, error: err.toString() });
+  }
+}
+
+function jsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function saveVehicleProfile(ss, data) {
+  var vNo = (data.vNo || "").toUpperCase().trim();
+  if (!vNo) return;
+  var profileSheet = ss.getSheetByName("Vehicle_Profile") || ss.insertSheet("Vehicle_Profile");
+  if (profileSheet.getLastRow() === 0) {
+    profileSheet.appendRow(["Vehicle No", "Lorry Owner", "Owner Village", "Owner Mobile", "Driver Name", "Driver Village", "Driver Mobile", "Licence No"]);
+  }
+  var rowData = [vNo, data.lorryOwner || "", data.ownerVillage || "", data.ownerMob || "", data.driverName || "", data.driverVillage || "", data.driverMob || "", data.licenceNo || ""];
+  var pData = profileSheet.getDataRange().getValues();
+  var foundRow = -1;
+  for (var i = 1; i < pData.length; i++) {
+    if (String(pData[i][0]).trim().toUpperCase() === vNo) { foundRow = i + 1; break; }
+  }
+  if (foundRow > 0) profileSheet.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
+  else profileSheet.appendRow(rowData);
+}
