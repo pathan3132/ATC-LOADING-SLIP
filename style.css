@@ -210,6 +210,8 @@ body {
 .lbl-purple { color: #7b1fa2; }
 .txt-purple { color: #7b1fa2 !important; font-weight: 800 !important; }
 .lbl-gold { color: #b38b00; }
+.lbl-orange { color: #ff9800; }
+.txt-orange { color: #ff9800 !important; font-weight: 800 !important; }
 .txt-pink { color: #e91e63 !important; font-weight: 800 !important; }
 .txt-bold { font-weight: 800 !important; color: #000 !important; }
 

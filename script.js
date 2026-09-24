@@ -110,10 +110,20 @@ if(timingInput) {
 function calculateSlip() {
     let rate = parseFloat(document.getElementById('slip_rate').value) || 0;
     let weight = parseFloat(document.getElementById('slip_weight').value) || 0;
+    let overloadWeight = parseFloat(document.getElementById('slip_overloadWeight').value) || 0;
+    let overloadRate = parseFloat(document.getElementById('slip_overloadRate').value) || rate; // Agar blank ho toh main rate use hoga
 
+    // Regular freight calculation
     let freight_total = Math.round(weight * rate);
-    if(rate > 0 && weight > 0) {
-        document.getElementById('slip_freight').value = freight_total;
+    
+    // Overload freight calculation
+    let overload_total = Math.round(overloadWeight * overloadRate);
+    
+    // Combined freight
+    let combined_freight = freight_total + overload_total;
+    
+    if((rate > 0 && weight > 0) || (overloadRate > 0 && overloadWeight > 0)) {
+        document.getElementById('slip_freight').value = combined_freight;
     }
     
     updateFinalNetPayable();
@@ -158,6 +168,8 @@ function clearSlipForNewEntry(vNo) {
     document.getElementById('slip_to').value = "";
     document.getElementById('slip_rate').value = 0;
     document.getElementById('slip_weight').value = 0;
+    document.getElementById('slip_overloadWeight').value = 0;
+    document.getElementById('slip_overloadRate').value = "";
     document.getElementById('slip_freight').value = 0;
     document.getElementById('slip_advance').value = 0;
     document.getElementById('slip_dPrice').value = 0;
@@ -283,6 +295,8 @@ async function generateBeeltyPDF() {
             to: document.getElementById('slip_to').value.toUpperCase(),
             rate: document.getElementById('slip_rate').value,
             weight: document.getElementById('slip_weight').value,
+            overloadWeight: document.getElementById('slip_overloadWeight').value,
+            overloadRate: document.getElementById('slip_overloadRate').value,
             advance: document.getElementById('slip_advance').value,
             driverPrice: document.getElementById('slip_dPrice').value,
             toPay: document.getElementById('slip_toPay').value,
@@ -416,6 +430,8 @@ function editSavedSlip(rowNumber) {
     document.getElementById('slip_to').value = d.to || "";
     document.getElementById('slip_rate').value = d.rate || 0;
     document.getElementById('slip_weight').value = d.weight || 0;
+    document.getElementById('slip_overloadWeight').value = d.overloadWeight || 0;
+    document.getElementById('slip_overloadRate').value = d.overloadRate || "";
     document.getElementById('slip_advance').value = d.advance || 0;
     document.getElementById('slip_dPrice').value = d.driverPrice || 0;
     document.getElementById('slip_timing').value = d.timing || "";

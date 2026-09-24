@@ -162,7 +162,7 @@
                         <!-- Right: Asif Bhai + ATC Logo -->
                         <div class="atc-contact-col text-end">
                             <div class="atc-owner-name">Asif Bhai</div>
-                            <div class="atc-phones">7030732113 | 8888664019</div>
+                            <div class="atc-phones">8888664019 | 7030732113</div>
                             <div class="atc-logo-box text-end mt-1">
                                 <img src="Images/ATC_Logo.png" class="atc-side-logo" onerror="this.style.display='none'">
                             </div>
@@ -259,6 +259,18 @@
                                         <td class="atc-td-lbl lbl-blue">Weight (Ton)</td>
                                         <td class="atc-td-val">
                                             <input type="number" step="0.001" id="slip_weight" oninput="calculateSlip()" class="txt-bold" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="atc-td-lbl lbl-orange">Overload Weight (Ton)</td>
+                                        <td class="atc-td-val">
+                                            <input type="number" step="0.001" id="slip_overloadWeight" oninput="calculateSlip()" class="txt-bold" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="atc-td-lbl lbl-orange">Overload Rate (₹/Ton)</td>
+                                        <td class="atc-td-val">
+                                            <input type="number" id="slip_overloadRate" oninput="calculateSlip()" class="txt-bold" placeholder="same as rate">
                                         </td>
                                     </tr>
                                     <tr class="row-gold-highlight">
