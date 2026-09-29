@@ -121,12 +121,27 @@ function calculateSlip() {
     
     // Combined freight
     let combined_freight = freight_total + overload_total;
+
+    // Show separate amounts on slip
+    document.getElementById('slip_freightAmt').value = freight_total;
+    document.getElementById('slip_overloadAmt').value = overload_total;
     
     if((rate > 0 && weight > 0) || (overloadRate > 0 && overloadWeight > 0)) {
         document.getElementById('slip_freight').value = combined_freight;
     }
     
     updateFinalNetPayable();
+}
+
+// Advance kisne diya: PARTY ya ATC
+function setAdvanceBy(who) {
+    who = (who === 'ATC') ? 'ATC' : 'PARTY';
+    const hid = document.getElementById('slip_advBy');
+    if (hid) hid.value = who;
+    ['PARTY', 'ATC'].forEach(k => {
+        const b = document.getElementById('advBy_' + k);
+        if (b) b.classList.toggle('active', k === who);
+    });
 }
 
 function calculateTotalFromManual() { updateFinalNetPayable(); }
@@ -136,6 +151,10 @@ function updateFinalNetPayable() {
     let adv = parseFloat(document.getElementById('slip_advance').value) || 0;
     let dPrice = parseFloat(document.getElementById('slip_dPrice').value) || 0;
     
+    // Advance 0 ho to "Paid By" row halka dikhe
+    const advRow = document.getElementById('row_advanceBy');
+    if (advRow) advRow.classList.toggle('adv-off', adv <= 0);
+
     let toPay = (freight - adv) + dPrice;
     document.getElementById('slip_toPay').value = toPay > 0 ? Math.round(toPay) : (toPay === 0 ? "0" : Math.round(toPay));
 }
@@ -172,6 +191,7 @@ function clearSlipForNewEntry(vNo) {
     document.getElementById('slip_overloadRate').value = "";
     document.getElementById('slip_freight').value = 0;
     document.getElementById('slip_advance').value = 0;
+    setAdvanceBy('PARTY');
     document.getElementById('slip_dPrice').value = 0;
     document.getElementById('slip_timing').value = "";
     document.getElementById('slip_lOwner').value = "";
@@ -231,6 +251,13 @@ async function generateBeeltyPDF() {
     // 2. Clean Clone
     const clone = originalElement.cloneNode(true);
     clone.querySelectorAll('button').forEach(el => el.remove());
+
+    // Advance Paid By: PDF me sirf selected (Party/ATC) dikhe; advance 0 ho to row hi hata do
+    clone.querySelectorAll('.adv-chip:not(.active)').forEach(el => el.remove());
+    if ((parseFloat(document.getElementById('slip_advance').value) || 0) <= 0) {
+        const advByRow = clone.querySelector('#row_advanceBy');
+        if (advByRow) advByRow.remove();
+    }
 
     // 3. Render Wrapper at (0,0) with Full Bottom Address Buffer (22px Padding)
     const wrapper = document.createElement('div');
@@ -298,6 +325,7 @@ async function generateBeeltyPDF() {
             overloadWeight: document.getElementById('slip_overloadWeight').value,
             overloadRate: document.getElementById('slip_overloadRate').value,
             advance: document.getElementById('slip_advance').value,
+            advanceBy: document.getElementById('slip_advBy').value,
             driverPrice: document.getElementById('slip_dPrice').value,
             toPay: document.getElementById('slip_toPay').value,
             timing: document.getElementById('slip_timing').value,
@@ -433,6 +461,7 @@ function editSavedSlip(rowNumber) {
     document.getElementById('slip_overloadWeight').value = d.overloadWeight || 0;
     document.getElementById('slip_overloadRate').value = d.overloadRate || "";
     document.getElementById('slip_advance').value = d.advance || 0;
+    setAdvanceBy(d.advanceBy || 'PARTY');
     document.getElementById('slip_dPrice').value = d.driverPrice || 0;
     document.getElementById('slip_timing').value = d.timing || "";
     document.getElementById('slip_lOwner').value = d.lorryOwner || "";
@@ -462,6 +491,8 @@ function shareSlipWhatsApp(rowNumber) {
     const to = d.to || "N/A";
     const party = d.partyName || "N/A";
     const toPay = d.toPay || "0";
+    const advAmt = parseFloat(d.advance) || 0;
+    const advLine = advAmt > 0 ? `\n💵 Advance: ₹${advAmt} (${d.advanceBy === 'ATC' ? 'ATC ne diya' : 'Party ne diya'})` : "";
     const pdfUrl = (slip.url && slip.url !== '#' && slip.url !== '') ? slip.url : "";
 
     let targetPhone = d.ownerMob || d.driverMob || "";
@@ -473,7 +504,7 @@ _Vegetable Suppliers - Loading Slip_
 🚚 Vehicle: *${vNo}*
 📅 Date: ${tDate}
 🛣️ Route: ${from} ➔ ${to}
-🏢 Party: ${party}
+🏢 Party: ${party}${advLine}
 
 💰 *NET PAYABLE (TO PAY): ₹${toPay}*
 ${pdfUrl ? `\n📄 *BEELTY PDF LINK:*\n${pdfUrl}\n` : ''}==========================

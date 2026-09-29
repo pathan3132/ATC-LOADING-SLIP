@@ -999,3 +999,45 @@ input[type=number] {
     border-radius: 2px !important;
     box-sizing: border-box !important;
 }
+
+/* ================= FINANCE TABLE: GROUPS, HIGHLIGHTS & ADVANCE PAID-BY ================= */
+/* Group ke beech thodi moti line */
+.atc-math-table tr.row-group-start td { border-top: 2px solid #0288d1 !important; }
+
+/* Overload group: halka orange background + padha jaane layak dark orange label */
+.atc-math-table tr.row-overload { background: #fff7ed !important; }
+.atc-math-table .lbl-orange { color: #c2410c !important; font-weight: 800 !important; }
+
+/* Advance group: halka blue background */
+.atc-math-table tr.row-advance { background: #eff8ff !important; }
+.atc-math-table tr.row-advance .text-danger { color: #b91c1c !important; }
+.atc-math-table tr.row-advance-by td { border-top: 1px dashed #7cc4ee !important; padding-top: 4px !important; padding-bottom: 4px !important; }
+.atc-math-table .adv-sub { font-size: 11px !important; font-weight: 700 !important; padding-left: 18px !important; }
+
+/* Party / ATC selector */
+.adv-toggle { display: inline-flex; gap: 6px; justify-content: flex-end; }
+.adv-chip {
+    border: 1.5px solid #cbd5e1;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    padding: 2px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    line-height: 1.4;
+    font-family: inherit;
+}
+.adv-chip.active { background: #0288d1; border-color: #0288d1; color: #fff; }
+#advBy_ATC.active { background: #be123c; border-color: #be123c; }
+
+/* Advance 0 ho to paid-by row dim */
+.atc-math-table tr.adv-off .adv-toggle { opacity: 0.4; }
+
+/* To Pay row thoda prominent */
+.atc-math-table tr.row-pink-highlight td { border-top: 2px solid #be123c !important; }
+
+/* chips ko <span> banaya hai taaki PDF me remove na hon */
+.adv-chip { display: inline-block; user-select: none; -webkit-user-select: none; }

@@ -262,30 +262,52 @@
                                         </td>
                                     </tr>
                                     <tr>
+                                        <td class="atc-td-lbl lbl-blue">Freight Amount (₹)</td>
+                                        <td class="atc-td-val">
+                                            <input type="text" id="slip_freightAmt" readonly class="txt-bold" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr class="row-overload row-group-start">
                                         <td class="atc-td-lbl lbl-orange">Overload Weight (Ton)</td>
                                         <td class="atc-td-val">
                                             <input type="number" step="0.001" id="slip_overloadWeight" oninput="calculateSlip()" class="txt-bold" placeholder="0">
                                         </td>
                                     </tr>
-                                    <tr>
+                                    <tr class="row-overload">
                                         <td class="atc-td-lbl lbl-orange">Overload Rate (₹/Ton)</td>
                                         <td class="atc-td-val">
                                             <input type="number" id="slip_overloadRate" oninput="calculateSlip()" class="txt-bold" placeholder="same as rate">
                                         </td>
                                     </tr>
-                                    <tr class="row-gold-highlight">
+                                    <tr class="row-overload">
+                                        <td class="atc-td-lbl lbl-orange">Overload Amount (₹)</td>
+                                        <td class="atc-td-val">
+                                            <input type="text" id="slip_overloadAmt" readonly class="txt-bold" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr class="row-gold-highlight row-group-start">
                                         <td class="atc-td-lbl lbl-gold">Total Freight (₹)</td>
                                         <td class="atc-td-val">
                                             <input type="number" id="slip_freight" oninput="calculateTotalFromManual()" class="txt-bold" placeholder="0">
                                         </td>
                                     </tr>
-                                    <tr>
+                                    <tr class="row-advance row-group-start">
                                         <td class="atc-td-lbl lbl-blue">Advance (₹)</td>
                                         <td class="atc-td-val">
                                             <input type="number" id="slip_advance" oninput="calculateSlip()" class="txt-bold text-danger" placeholder="0">
                                         </td>
                                     </tr>
-                                    <tr>
+                                    <tr class="row-advance row-advance-by" id="row_advanceBy">
+                                        <td class="atc-td-lbl lbl-blue adv-sub">Advance Paid By</td>
+                                        <td class="atc-td-val">
+                                            <input type="hidden" id="slip_advBy" value="PARTY">
+                                            <div class="adv-toggle">
+                                                <span role="button" tabindex="0" id="advBy_PARTY" class="adv-chip active" onclick="setAdvanceBy('PARTY')">Party</span>
+                                                <span role="button" tabindex="0" id="advBy_ATC" class="adv-chip" onclick="setAdvanceBy('ATC')">ATC</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr class="row-group-start">
                                         <td class="atc-td-lbl lbl-teal">Timing (HR)</td>
                                         <td class="atc-td-val">
                                             <input type="text" id="slip_timing" placeholder="0 Hr" class="txt-teal txt-bold">
