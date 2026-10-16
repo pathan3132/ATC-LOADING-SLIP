@@ -22,9 +22,21 @@
     <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(reg => console.log('Service Worker Registered'))
-        .catch(err => console.log('SW Registration Failed', err));
+      const hadController = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+        reg.update();                                              // app khulte hi naya version check
+        document.addEventListener('visibilitychange', () => {      // app wapas khulne par bhi check
+          if (document.visibilityState === 'visible') reg.update();
+        });
+      }).catch(err => console.log('SW Registration Failed', err));
+
+      // Naya version activate ho to ek baar auto-reload (pehli install par nahi)
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController || reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
     });
   }
 </script>

@@ -30,11 +30,11 @@ function doGet(e) {
 
     var ss = SpreadsheetApp.openById(SHEET_ID);
 
-    // 1. GET VEHICLES (Autocomplete)
+    // 1. GET VEHICLES (Autocomplete) - Vehicle_Profile sheet se
     if (action === "getVehicles") {
-      var sheet = ss.getSheetByName("Data_log");
+      var sheet = ss.getSheetByName("Vehicle_Profile");
       if (!sheet || sheet.getLastRow() <= 1) return jsonResponse([]);
-      var values = sheet.getRange(2, 2, sheet.getLastRow() - 1, 1).getValues(); 
+      var values = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
       var vehicles = [...new Set(values.map(r => r[0].toString().trim().toUpperCase()))].filter(v => v !== "");
       return jsonResponse(vehicles.sort());
     }
@@ -179,4 +179,20 @@ function saveVehicleProfile(ss, data) {
   }
   if (foundRow > 0) profileSheet.getRange(foundRow, 1, 1, rowData.length).setValues([rowData]);
   else profileSheet.appendRow(rowData);
+}
+
+// 🟢 EK BAAR RUN KARO (Editor me): purani saari slips se Vehicle_Profile bana deta hai
+function rebuildVehicleProfilesFromArchive() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var archive = ss.getSheetByName("Slip_Archive");
+  if (!archive || archive.getLastRow() < 2) { Logger.log("Archive khali hai"); return; }
+  var rows = archive.getDataRange().getValues();
+  var count = 0;
+  for (var i = 1; i < rows.length; i++) {            // purani se nayi -> latest slip jeetegi
+    try {
+      var d = JSON.parse(String(rows[i][4] || "{}"));
+      if (d.vNo) { saveVehicleProfile(ss, d); count++; }
+    } catch (e) {}
+  }
+  Logger.log("✅ Profiles update hui: " + count + " slips se");
 }

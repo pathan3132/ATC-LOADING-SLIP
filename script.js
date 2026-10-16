@@ -54,6 +54,7 @@ function setLocalSlipsCache(data) {
     if (Array.isArray(data)) {
         window.currentSlipHistory = data;
         try { localStorage.setItem('atc_standalone_slips', JSON.stringify(data)); } catch(e) {}
+        rebuildSuggestions();
     }
 }
 
@@ -92,6 +93,7 @@ window.onload = () => {
     if (slipDateEl) slipDateEl.value = getTodayDateFormatted();
 
     window.currentSlipHistory = getLocalSlipsCache();
+    rebuildSuggestions();
     loadVehicleListForSlip();
     syncSlipsFromServer();
 };
@@ -160,13 +162,12 @@ function updateFinalNetPayable() {
 }
 // ================= VEHICLE SEARCH & AUTO-FILL =================
 async function loadVehicleListForSlip() {
-    const list = document.getElementById('vehicleListOptions');
-    if (!list) return;
     try {
         const res = await fetch(apiUrl("?action=getVehicles"));
         const vehicles = await res.json();
         if (Array.isArray(vehicles)) {
-            list.innerHTML = vehicles.map(v => `<option value="${v}">`).join('');
+            window.serverVehicles = vehicles;
+            renderVehicleList();
         }
     } catch(e) {}
 }
@@ -180,6 +181,7 @@ async function searchVehicleForSlip() {
 }
 
 function clearSlipForNewEntry(vNo) {
+    window._autoKey = null; window._autoSnap = null; showAutoHint('');
     document.getElementById('slip_vNo').value = vNo;
     document.getElementById('slip_date').value = getTodayDateFormatted();
     document.getElementById('slip_party').value = "";
@@ -212,21 +214,32 @@ function resetBeeltyForm() {
 }
 
 async function autoFillOwnerDriver(vNo) {
-    vNo = (vNo || "").toUpperCase().trim();
-    if (!vNo) return;
-    try {
-        const res = await fetch(apiUrl(`?action=getVehicleProfile&vNo=${encodeURIComponent(vNo)}`));
-        const profile = await res.json();
-        if (!profile || Object.keys(profile).length === 0) return;
+    const key = vKey(vNo);
+    if (key.length < 6) return;
+    if (key === window._autoKey) return;           // already filled
+    const editing = !!document.getElementById('slip_archiveRow').value;
 
-        if (profile.lOwner) document.getElementById('slip_lOwner').value = profile.lOwner;
-        if (profile.oVillage) document.getElementById('slip_oVillage').value = profile.oVillage;
-        if (profile.oMob) document.getElementById('slip_oMob').value = profile.oMob;
-        if (profile.dName) document.getElementById('slip_dName').value = profile.dName;
-        if (profile.dVillage) document.getElementById('slip_dVillage').value = profile.dVillage;
-        if (profile.dMob) document.getElementById('slip_dMob').value = profile.dMob;
-        if (profile.licence) document.getElementById('slip_licence').value = profile.licence;
-    } catch (e) {}
+    let p = window.vehicleProfiles[key];           // 1) phone me saved (instant)
+    if (!p) {                                      // 2) server ki Vehicle_Profile sheet
+        try {
+            const res = await fetch(apiUrl(`?action=getVehicleProfile&vNo=${encodeURIComponent(String(vNo).toUpperCase().trim())}`));
+            const sp = await res.json();
+            if (sp && Object.keys(sp).length > 0) {
+                p = Object.assign({ vNo: String(vNo).toUpperCase().trim() }, sp);
+                window.vehicleProfiles[key] = p;
+                saveProfilesLS();
+                renderVehicleList();
+            }
+        } catch (e) {}
+    }
+    if (vKey(document.getElementById('slip_vNo').value) !== key) return; // user ne gaadi badal di
+    if (p) {
+        applyVehicleProfile(p, editing);
+        markAutoFilled(key);
+        showAutoHint('✅ Pichli slip se Owner/Driver details bhar di gayi', true);
+    } else {
+        showAutoHint('🆕 Nayi gaadi – pehle ki slip nahi mili. Type karte waqt suggestions dikhenge.', false);
+    }
 }
 
 // ================= PDF GENERATION & GOOGLE DRIVE SAVE =================
@@ -649,3 +662,172 @@ function logout() {
     }
 }
 window.logout = logout;
+
+// ================= 🧠 SMART AUTO-FILL & SUGGESTIONS =================
+// Pehle bani hui slips se: (1) gaadi number daalte hi owner/driver details auto-fill,
+// (2) har field me pehle type kiye hue naam/gaon/mobile ke suggestions.
+const PROFILE_MAP = [   // [profileKey, slipFormKey, inputId]
+    ['lOwner',   'lorryOwner',   'slip_lOwner'],
+    ['oVillage', 'ownerVillage', 'slip_oVillage'],
+    ['oMob',     'ownerMob',     'slip_oMob'],
+    ['dName',    'driverName',   'slip_dName'],
+    ['dVillage', 'driverVillage','slip_dVillage'],
+    ['dMob',     'driverMob',    'slip_dMob'],
+    ['licence',  'licenceNo',    'slip_licence']
+];
+const SUGGEST_FIELDS = [ // [inputId, slipFormKey]
+    ['slip_party', 'partyName'], ['slip_from', 'from'], ['slip_to', 'to'],
+    ['slip_lOwner', 'lorryOwner'], ['slip_oVillage', 'ownerVillage'], ['slip_oMob', 'ownerMob'],
+    ['slip_dName', 'driverName'], ['slip_dVillage', 'driverVillage'], ['slip_dMob', 'driverMob'],
+    ['slip_licence', 'licenceNo']
+];
+
+window.vehicleProfiles = (function () {
+    try { return JSON.parse(localStorage.getItem('atc_vehicle_profiles') || '{}') || {}; } catch (e) { return {}; }
+})();
+window.ownerMap = {};
+window.driverMap = {};
+window.serverVehicles = [];
+window._autoKey = null;
+window._autoSnap = null;
+
+function vKey(v) { return String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+function saveProfilesLS() {
+    try { localStorage.setItem('atc_vehicle_profiles', JSON.stringify(window.vehicleProfiles)); } catch (e) {}
+}
+
+function rebuildSuggestions() {
+    const slips = window.currentSlipHistory || [];   // newest first
+    const hist = {};
+    const counts = {};
+    const owners = {}, drivers = {};
+    SUGGEST_FIELDS.forEach(f => counts[f[0]] = {});
+
+    slips.forEach(slip => {
+        let d = {};
+        try { d = JSON.parse(slip.formData || '{}') || {}; } catch (e) { return; }
+
+        const key = vKey(d.vNo);
+        if (key) {
+            const p = hist[key] || (hist[key] = { vNo: String(d.vNo).toUpperCase().trim() });
+            PROFILE_MAP.forEach(m => { if (!p[m[0]] && d[m[1]]) p[m[0]] = String(d[m[1]]).trim(); });
+        }
+        SUGGEST_FIELDS.forEach(f => {
+            const v = String(d[f[1]] || '').trim().toUpperCase();
+            if (v) counts[f[0]][v] = (counts[f[0]][v] || 0) + 1;
+        });
+        const on = String(d.lorryOwner || '').trim().toUpperCase();
+        if (on && !owners[on]) owners[on] = { oVillage: d.ownerVillage || '', oMob: d.ownerMob || '' };
+        const dn = String(d.driverName || '').trim().toUpperCase();
+        if (dn && !drivers[dn]) drivers[dn] = { dVillage: d.driverVillage || '', dMob: d.driverMob || '', licence: d.licenceNo || '' };
+    });
+
+    // purani cached profiles + nayi history merge (history ko priority)
+    Object.keys(hist).forEach(k => {
+        window.vehicleProfiles[k] = Object.assign({}, window.vehicleProfiles[k] || {}, hist[k]);
+    });
+    window.ownerMap = owners;
+    window.driverMap = drivers;
+    saveProfilesLS();
+
+    // datalists (har field ke liye)
+    SUGGEST_FIELDS.forEach(f => {
+        const id = 'dl_' + f[0];
+        let dl = document.getElementById(id);
+        if (!dl) { dl = document.createElement('datalist'); dl.id = id; document.body.appendChild(dl); }
+        const vals = Object.keys(counts[f[0]]).sort((a, b) => counts[f[0]][b] - counts[f[0]][a]);
+        dl.innerHTML = vals.map(v => `<option value="${safeAttr(v)}">`).join('');
+        const inp = document.getElementById(f[0]);
+        if (inp) { inp.setAttribute('list', id); inp.setAttribute('autocomplete', 'off'); }
+    });
+    renderVehicleList();
+}
+
+function renderVehicleList() {
+    const list = document.getElementById('vehicleListOptions');
+    if (!list) return;
+    const seen = new Map();
+    Object.keys(window.vehicleProfiles).forEach(k => {
+        const p = window.vehicleProfiles[k];
+        if (p && p.vNo) seen.set(k, p);
+    });
+    (window.serverVehicles || []).forEach(v => {
+        const k = vKey(v);
+        if (k && !seen.has(k)) seen.set(k, { vNo: v });
+    });
+    const items = [...seen.values()].sort((a, b) => String(a.vNo).localeCompare(String(b.vNo)));
+    list.innerHTML = items.map(p => `<option value="${safeAttr(p.vNo)}"${p.lOwner ? ` label="${safeAttr(p.lOwner)}"` : ''}>`).join('');
+    const vIn = document.getElementById('slip_vNo');
+    if (vIn) { vIn.setAttribute('list', 'vehicleListOptions'); vIn.setAttribute('autocomplete', 'off'); }
+}
+
+function profileSnapshot() {
+    return PROFILE_MAP.map(m => (document.getElementById(m[2]).value || '')).join('|');
+}
+
+function markAutoFilled(key) {
+    window._autoKey = key;
+    window._autoSnap = profileSnapshot();
+}
+
+function applyVehicleProfile(p, onlyEmpty) {
+    PROFILE_MAP.forEach(m => {
+        const el = document.getElementById(m[2]);
+        if (!el || !p[m[0]]) return;
+        if (onlyEmpty && el.value.trim()) return;
+        el.value = p[m[0]];
+    });
+}
+
+function showAutoHint(msg, ok) {
+    let el = document.getElementById('autoFillHint');
+    if (!el) {
+        const grp = document.getElementById('slipSearchVNo') && document.getElementById('slipSearchVNo').closest('.input-group');
+        if (!grp) return;
+        el = document.createElement('div');
+        el.id = 'autoFillHint';
+        el.style.cssText = 'font-size:12px; font-weight:600; margin-top:6px;';
+        grp.insertAdjacentElement('afterend', el);
+    }
+    el.textContent = msg || '';
+    el.style.color = ok ? '#198754' : '#6c757d';
+}
+
+// Gaadi number type karte hi (ya list se chunte hi) auto-fill
+document.addEventListener('input', function (e) {
+    if (e.target.id !== 'slip_vNo') return;
+    const key = vKey(e.target.value);
+    const editing = !!document.getElementById('slip_archiveRow').value;
+    if (key === window._autoKey) return;
+
+    // Pichli gaadi ki auto-filled details (agar haath se badli nahi) hata do, taaki galat owner na rahe
+    if (window._autoKey && !editing && profileSnapshot() === window._autoSnap) {
+        PROFILE_MAP.forEach(m => { document.getElementById(m[2]).value = ''; });
+        window._autoKey = null; window._autoSnap = null;
+        showAutoHint('');
+    }
+    if (key.length < 6) return;
+    const p = window.vehicleProfiles[key];
+    if (p) {
+        applyVehicleProfile(p, editing);
+        markAutoFilled(key);
+        showAutoHint('✅ Pichli slip se Owner/Driver details bhar di gayi', true);
+    }
+});
+
+// Owner / Driver ka naam chunte hi uska gaon, mobile (aur licence) bhar do (sirf khali fields me)
+document.addEventListener('change', function (e) {
+    const fillEmpty = (id, val) => {
+        const el = document.getElementById(id);
+        if (el && val && !el.value.trim()) el.value = val;
+    };
+    if (e.target.id === 'slip_lOwner') {
+        const o = window.ownerMap[String(e.target.value).trim().toUpperCase()];
+        if (o) { fillEmpty('slip_oVillage', o.oVillage); fillEmpty('slip_oMob', o.oMob); }
+    }
+    if (e.target.id === 'slip_dName') {
+        const d = window.driverMap[String(e.target.value).trim().toUpperCase()];
+        if (d) { fillEmpty('slip_dVillage', d.dVillage); fillEmpty('slip_dMob', d.dMob); fillEmpty('slip_licence', d.licence); }
+    }
+});
