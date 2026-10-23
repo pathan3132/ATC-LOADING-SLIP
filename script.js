@@ -271,6 +271,8 @@ async function generateBeeltyPDF() {
     // 2. Clean Clone
     const clone = originalElement.cloneNode(true);
     clone.querySelectorAll('button').forEach(el => el.remove());
+    // html2canvas input me letter-spacing ke saath poora number nahi dikhata (jaise 2,57,000 -> 2)
+    clone.querySelectorAll('input').forEach(i => { i.style.letterSpacing = 'normal'; });
 
     // Advance Paid By: PDF me sirf selected (Party/ATC) dikhe; advance 0 ho to row hi hata do
     clone.querySelectorAll('.adv-chip:not(.active)').forEach(el => el.remove());

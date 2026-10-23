@@ -1058,7 +1058,7 @@ input[type=number] {
     justify-content: flex-start !important;
     padding: 0 !important;
 }
-.atc-split-section .atc-basket-img { width: 84% !important; max-height: 215px; object-fit: contain; margin-top: 40px; }
+.atc-split-section .atc-basket-img { width: 84% !important; max-height: 215px; object-fit: contain; margin-top: -4px; }
 
 .atc-brand-bottom { width: 100%; margin-top: auto; text-align: center; }
 .atc-brand-name {
@@ -1161,7 +1161,7 @@ a.atc-website .atc-web-text b { font-size: 11.5px !important; letter-spacing: 0 
 #slip_advance       { color: #b91c1c !important; }
 
 /* To Pay – crimson, sabse bada */
-#slip_toPay         { color: #be123c !important; font-size: 18px !important; font-weight: 900 !important; letter-spacing: 0.3px; }
+#slip_toPay         { color: #be123c !important; font-size: 18px !important; font-weight: 900 !important; letter-spacing: normal !important; }
 
 /* Placeholder halka */
 .atc-td-val input::placeholder { opacity: 0.35; }
@@ -1185,3 +1185,6 @@ a.atc-website .atc-web-text b { font-size: 11.5px !important; letter-spacing: 0 
 .update-btn-now { background: #22c55e; color: #052e16; border: 0; font-weight: 800; padding: 8px 16px; border-radius: 10px; font-size: 14px; }
 .update-btn-now:disabled { opacity: .7; }
 .update-btn-later { background: transparent; color: #cbd5e1; border: 1px solid #475569; padding: 8px 12px; border-radius: 10px; font-size: 13px; }
+
+/* PDF render bug fix: inputs me letter-spacing na ho (html2canvas sirf pehla akshar dikhata hai) */
+.atc-math-table input { letter-spacing: normal !important; }
