@@ -1,6 +1,8 @@
-// Version badalne ki zaroorat nahi: ab network-first hai, hamesha naya code pehle aata hai.
-// (Sirf internet na ho to purani saved copy chalti hai.)
-const CACHE_NAME = 'atc-app-v9';
+// ATC Loading Slip – Service Worker
+// Naya version deploy karne par: sirf CACHE_NAME ka number badha do (v10 -> v11 ...).
+// Users ko "Update Karein" button dikhega; button dabate hi naya version chalu ho jaata hai.
+const CACHE_NAME = 'atc-app-v10';
+const OLD_AUTO_VERSIONS = ['atc-app-v7', 'atc-app-v8', 'atc-app-v9']; // button se pehle wale versions
 const urlsToCache = [
   './index.html',
   './style.css',
@@ -10,8 +12,19 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache)));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    // Koi file missing ho to bhi install fail na ho
+    await Promise.all(urlsToCache.map(u => cache.add(new Request(u, { cache: 'reload' })).catch(() => {})));
+    // Sirf ek baar: purane (button-less) versions wale users ko seedha naya SW de do
+    const keys = await caches.keys();
+    if (keys.some(k => OLD_AUTO_VERSIONS.includes(k))) self.skipWaiting();
+  })());
+});
+
+// Page jab "Update Karein" dabaye tab naya SW activate hoga
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -22,11 +35,10 @@ self.addEventListener('activate', event => {
   );
 });
 
+// Network-first: internet ho to hamesha naya, warna saved copy
 self.addEventListener('fetch', event => {
   const req = event.request;
-  // Sirf apni site ki GET files; Apps Script / CDN ko browser khud sambhale
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
-
   event.respondWith(
     fetch(req, { cache: 'no-cache' })
       .then(res => {

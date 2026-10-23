@@ -110,19 +110,25 @@ if(timingInput) {
 }
 
 function calculateSlip() {
-    let rate = parseFloat(document.getElementById('slip_rate').value) || 0;
+    let rate = numVal('slip_rate') || 0;
     let weight = parseFloat(document.getElementById('slip_weight').value) || 0;
     let overloadWeight = parseFloat(document.getElementById('slip_overloadWeight').value) || 0;
-    let overloadRate = parseFloat(document.getElementById('slip_overloadRate').value) || rate; // Agar blank ho toh main rate use hoga
+    let overloadRate = numVal('slip_overloadRate') || rate; // Agar blank ho toh main rate use hoga
 
-    // Regular freight calculation
-    let freight_total = Math.round(weight * rate);
+    // Driver Price Freight Amount me judega
+    let dPrice = numVal('slip_dPrice') || 0;
+
+    // Regular freight calculation (weight x rate + driver price)
+    let freight_total = Math.round(weight * rate) + Math.round(dPrice);
     
     // Overload freight calculation
     let overload_total = Math.round(overloadWeight * overloadRate);
     
-    // Combined freight
-    let combined_freight = freight_total + overload_total;
+    // Insurance bhi Total Freight me judega
+    let insurance = numVal('slip_insurance') || 0;
+
+    // Combined freight (freight + overload + insurance)
+    let combined_freight = freight_total + overload_total + Math.round(insurance);
 
     // Show separate amounts on slip
     document.getElementById('slip_freightAmt').value = freight_total;
@@ -149,16 +155,16 @@ function setAdvanceBy(who) {
 function calculateTotalFromManual() { updateFinalNetPayable(); }
 
 function updateFinalNetPayable() {
-    let freight = parseFloat(document.getElementById('slip_freight').value) || 0;
-    let adv = parseFloat(document.getElementById('slip_advance').value) || 0;
-    let dPrice = parseFloat(document.getElementById('slip_dPrice').value) || 0;
+    let freight = numVal('slip_freight') || 0;
+    let adv = numVal('slip_advance') || 0;
     
     // Advance 0 ho to "Paid By" row halka dikhe
     const advRow = document.getElementById('row_advanceBy');
     if (advRow) advRow.classList.toggle('adv-off', adv <= 0);
 
-    let toPay = (freight - adv) + dPrice;
+    let toPay = freight - adv;   // Driver Price Freight Amount me aur Insurance Total Freight me pehle se shamil hai
     document.getElementById('slip_toPay').value = toPay > 0 ? Math.round(toPay) : (toPay === 0 ? "0" : Math.round(toPay));
+    formatAllAmounts();
 }
 // ================= VEHICLE SEARCH & AUTO-FILL =================
 async function loadVehicleListForSlip() {
@@ -195,6 +201,7 @@ function clearSlipForNewEntry(vNo) {
     document.getElementById('slip_advance').value = 0;
     setAdvanceBy('PARTY');
     document.getElementById('slip_dPrice').value = 0;
+    document.getElementById('slip_insurance').value = 0;
     document.getElementById('slip_timing').value = "";
     document.getElementById('slip_lOwner').value = "";
     document.getElementById('slip_oVillage').value = "";
@@ -267,7 +274,7 @@ async function generateBeeltyPDF() {
 
     // Advance Paid By: PDF me sirf selected (Party/ATC) dikhe; advance 0 ho to row hi hata do
     clone.querySelectorAll('.adv-chip:not(.active)').forEach(el => el.remove());
-    if ((parseFloat(document.getElementById('slip_advance').value) || 0) <= 0) {
+    if ((numVal('slip_advance') || 0) <= 0) {
         const advByRow = clone.querySelector('#row_advanceBy');
         if (advByRow) advByRow.remove();
     }
@@ -282,6 +289,14 @@ async function generateBeeltyPDF() {
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
     window.scrollTo(0, 0);
+
+    // PDF me clickable links ke liye positions pehle hi note kar lo
+    const linkRects = [];
+    const cRect = clone.getBoundingClientRect();
+    clone.querySelectorAll('a.atc-link').forEach(a => {
+        const r = a.getBoundingClientRect();
+        linkRects.push({ url: a.href, x: r.left - cRect.left, y: r.top - cRect.top, w: r.width, h: r.height });
+    });
 
     const opt = {
         margin: [0, 0, 0, 0],
@@ -313,6 +328,10 @@ async function generateBeeltyPDF() {
             .toPdf()
             .get('pdf');
 
+        // Website / Udyam links PDF me bhi clickable
+        const mmPerPx = pdfWidthMM / 794;
+        linkRects.forEach(l => { try { pdf.link(l.x * mmPerPx, l.y * mmPerPx, l.w * mmPerPx, l.h * mmPerPx, { url: l.url }); } catch (e) {} });
+
         const pdfBlob = pdf.output('blob');
         const pdfBase64 = pdf.output('datauristring').split(',')[1];
 
@@ -333,14 +352,15 @@ async function generateBeeltyPDF() {
             partyName: document.getElementById('slip_party').value.toUpperCase(),
             from: document.getElementById('slip_from').value.toUpperCase(),
             to: document.getElementById('slip_to').value.toUpperCase(),
-            rate: document.getElementById('slip_rate').value,
+            rate: rawVal('slip_rate'),
             weight: document.getElementById('slip_weight').value,
             overloadWeight: document.getElementById('slip_overloadWeight').value,
-            overloadRate: document.getElementById('slip_overloadRate').value,
-            advance: document.getElementById('slip_advance').value,
+            overloadRate: rawVal('slip_overloadRate'),
+            advance: rawVal('slip_advance'),
             advanceBy: document.getElementById('slip_advBy').value,
-            driverPrice: document.getElementById('slip_dPrice').value,
-            toPay: document.getElementById('slip_toPay').value,
+            driverPrice: rawVal('slip_dPrice'),
+            insurance: rawVal('slip_insurance'),
+            toPay: rawVal('slip_toPay'),
             timing: document.getElementById('slip_timing').value,
             lorryOwner: document.getElementById('slip_lOwner').value.toUpperCase(),
             ownerVillage: document.getElementById('slip_oVillage').value.toUpperCase(),
@@ -476,6 +496,7 @@ function editSavedSlip(rowNumber) {
     document.getElementById('slip_advance').value = d.advance || 0;
     setAdvanceBy(d.advanceBy || 'PARTY');
     document.getElementById('slip_dPrice').value = d.driverPrice || 0;
+    document.getElementById('slip_insurance').value = d.insurance || 0;
     document.getElementById('slip_timing').value = d.timing || "";
     document.getElementById('slip_lOwner').value = d.lorryOwner || "";
     document.getElementById('slip_oVillage').value = d.ownerVillage || "";
@@ -830,4 +851,55 @@ document.addEventListener('change', function (e) {
         const d = window.driverMap[String(e.target.value).trim().toUpperCase()];
         if (d) { fillEmpty('slip_dVillage', d.dVillage); fillEmpty('slip_dMob', d.dMob); fillEmpty('slip_licence', d.licence); }
     }
+});
+
+
+// ================= 💰 INDIAN COMMA FORMAT (5,000 | 1,00,000) =================
+const AMOUNT_IDS  = ['slip_rate', 'slip_dPrice', 'slip_freightAmt', 'slip_overloadRate', 'slip_overloadAmt', 'slip_insurance', 'slip_freight', 'slip_advance', 'slip_toPay'];
+const AMOUNT_EDIT = ['slip_rate', 'slip_dPrice', 'slip_overloadRate', 'slip_insurance', 'slip_freight', 'slip_advance'];
+
+function stripNum(v) { return String(v == null ? '' : v).replace(/,/g, '').trim(); }
+function numVal(id) { const n = parseFloat(stripNum(document.getElementById(id).value)); return isNaN(n) ? 0 : n; }
+function rawVal(id) { return stripNum(document.getElementById(id).value); }
+
+function groupIN(intStr) {
+    if (intStr.length <= 3) return intStr;
+    const last3 = intStr.slice(-3);
+    const rest = intStr.slice(0, -3).replace(/\B(?=(\d{2})+(?!\d))/g, ',');
+    return rest + ',' + last3;
+}
+function fmtIN(v) {
+    let s = stripNum(v);
+    if (s === '' || s === '-') return s;
+    const neg = s[0] === '-';
+    s = s.replace('-', '');
+    const parts = s.split('.');
+    const intPart = groupIN(parts[0].replace(/\D/g, '') || '0');
+    return (neg ? '-' : '') + intPart + (parts.length > 1 ? '.' + parts[1].replace(/\D/g, '') : '');
+}
+function formatAllAmounts() {
+    AMOUNT_IDS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el !== document.activeElement) el.value = fmtIN(el.value);
+    });
+}
+
+// Type karte waqt hi comma lagte jaayein (cursor apni jagah rahe)
+document.addEventListener('input', function (e) {
+    const el = e.target;
+    if (!AMOUNT_EDIT.includes(el.id)) return;
+    const pos = el.selectionStart;
+    const digitsBefore = el.value.slice(0, pos).replace(/[^\d.]/g, '').length;
+    let raw = el.value.replace(/[^\d.]/g, '');
+    const firstDot = raw.indexOf('.');
+    if (firstDot !== -1) raw = raw.slice(0, firstDot + 1) + raw.slice(firstDot + 1).replace(/\./g, '');
+    const f = fmtIN(raw);
+    el.value = f;
+    let cnt = 0, np = 0;
+    while (np < f.length && cnt < digitsBefore) { if (/[\d.]/.test(f[np])) cnt++; np++; }
+    try { el.setSelectionRange(np, np); } catch (err) {}
+});
+// Field se bahar jaate hi bhi poora format
+document.addEventListener('focusout', function (e) {
+    if (AMOUNT_IDS.includes(e.target.id)) e.target.value = fmtIN(e.target.value);
 });

@@ -18,22 +18,61 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
+    <!-- 🔄 UPDATE BANNER (naya version aane par dikhta hai) -->
+    <div id="updateBanner" class="update-banner" role="alert">
+        <div class="update-text">
+            <b>🔄 Naya update available hai!</b>
+            <small>Update se pehle chalti slip save kar lein.</small>
+        </div>
+        <div class="update-actions">
+            <button type="button" id="updateNowBtn" class="update-btn-now">Update Karein</button>
+            <button type="button" id="updateLaterBtn" class="update-btn-later">Baad me</button>
+        </div>
+    </div>
+
 
     <script>
   if ('serviceWorker' in navigator) {
+    let updateClicked = false;
+
+    function showUpdateBanner(reg) {
+      const bar = document.getElementById('updateBanner');
+      if (!bar || !reg.waiting) return;
+      bar.classList.add('show');
+      document.getElementById('updateNowBtn').onclick = function () {
+        updateClicked = true;
+        this.disabled = true;
+        this.textContent = 'Updating...';
+        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+        setTimeout(() => window.location.reload(), 4000);   // safety: agar controllerchange na aaye
+      };
+      document.getElementById('updateLaterBtn').onclick = function () { bar.classList.remove('show'); };
+    }
+
     window.addEventListener('load', () => {
-      const hadController = !!navigator.serviceWorker.controller;
       navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
-        reg.update();                                              // app khulte hi naya version check
+        // Naya version pehle se wait kar raha ho
+        if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg);
+
+        // Naya version abhi download hua
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(reg);
+          });
+        });
+
+        reg.update();                                              // app khulte hi check
         document.addEventListener('visibilitychange', () => {      // app wapas khulne par bhi check
           if (document.visibilityState === 'visible') reg.update();
         });
       }).catch(err => console.log('SW Registration Failed', err));
 
-      // Naya version activate ho to ek baar auto-reload (pehli install par nahi)
+      // Button dabane ke baad hi reload (beech me kaam ka form na ude)
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!hadController || reloaded) return;
+        if (!updateClicked || reloaded) return;
         reloaded = true;
         window.location.reload();
       });
@@ -251,6 +290,10 @@
                                 <label class="lbl-gold">LICENCE NO.</label>
                                 <input type="text" id="slip_licence" class="txt-bold" placeholder="">
                             </div>
+                            <div class="atc-row-line">
+                                <label class="lbl-teal">TIMING (HR)</label>
+                                <input type="text" id="slip_timing" class="txt-teal txt-bold" placeholder="0 Hr">
+                            </div>
                         </div>
                     </div>
 
@@ -264,13 +307,19 @@
                                     <tr>
                                         <td class="atc-td-lbl lbl-pink">Rate (₹ Per Ton)</td>
                                         <td class="atc-td-val">
-                                            <input type="number" id="slip_rate" oninput="calculateSlip()" class="txt-bold" placeholder="0">
+                                            <input type="text" inputmode="decimal" id="slip_rate" oninput="calculateSlip()" class="txt-bold" placeholder="0">
                                         </td>
                                     </tr>
                                     <tr>
                                         <td class="atc-td-lbl lbl-blue">Weight (Ton)</td>
                                         <td class="atc-td-val">
                                             <input type="number" step="0.001" id="slip_weight" oninput="calculateSlip()" class="txt-bold" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="atc-td-lbl lbl-purple">Driver Price (Inam) (+)</td>
+                                        <td class="atc-td-val">
+                                            <input type="text" inputmode="decimal" id="slip_dPrice" oninput="calculateSlip()" class="txt-purple txt-bold" placeholder="0">
                                         </td>
                                     </tr>
                                     <tr>
@@ -288,7 +337,7 @@
                                     <tr class="row-overload">
                                         <td class="atc-td-lbl lbl-orange">Overload Rate (₹/Ton)</td>
                                         <td class="atc-td-val">
-                                            <input type="number" id="slip_overloadRate" oninput="calculateSlip()" class="txt-bold" placeholder="same as rate">
+                                            <input type="text" inputmode="decimal" id="slip_overloadRate" oninput="calculateSlip()" class="txt-bold" placeholder="same as rate">
                                         </td>
                                     </tr>
                                     <tr class="row-overload">
@@ -297,16 +346,22 @@
                                             <input type="text" id="slip_overloadAmt" readonly class="txt-bold" placeholder="0">
                                         </td>
                                     </tr>
-                                    <tr class="row-gold-highlight row-group-start">
+                                    <tr class="row-insurance row-group-start">
+                                        <td class="atc-td-lbl lbl-green">Insurance (+)</td>
+                                        <td class="atc-td-val">
+                                            <input type="text" inputmode="decimal" id="slip_insurance" oninput="calculateSlip()" class="txt-green txt-bold" placeholder="0">
+                                        </td>
+                                    </tr>
+                                    <tr class="row-gold-highlight">
                                         <td class="atc-td-lbl lbl-gold">Total Freight (₹)</td>
                                         <td class="atc-td-val">
-                                            <input type="number" id="slip_freight" oninput="calculateTotalFromManual()" class="txt-bold" placeholder="0">
+                                            <input type="text" inputmode="decimal" id="slip_freight" oninput="calculateTotalFromManual()" class="txt-bold" placeholder="0">
                                         </td>
                                     </tr>
                                     <tr class="row-advance row-group-start">
                                         <td class="atc-td-lbl lbl-blue">Advance (₹)</td>
                                         <td class="atc-td-val">
-                                            <input type="number" id="slip_advance" oninput="calculateSlip()" class="txt-bold text-danger" placeholder="0">
+                                            <input type="text" inputmode="decimal" id="slip_advance" oninput="calculateSlip()" class="txt-bold text-danger" placeholder="0">
                                         </td>
                                     </tr>
                                     <tr class="row-advance row-advance-by" id="row_advanceBy">
@@ -317,18 +372,6 @@
                                                 <span role="button" tabindex="0" id="advBy_PARTY" class="adv-chip active" onclick="setAdvanceBy('PARTY')">Party</span>
                                                 <span role="button" tabindex="0" id="advBy_ATC" class="adv-chip" onclick="setAdvanceBy('ATC')">ATC</span>
                                             </div>
-                                        </td>
-                                    </tr>
-                                    <tr class="row-group-start">
-                                        <td class="atc-td-lbl lbl-teal">Timing (HR)</td>
-                                        <td class="atc-td-val">
-                                            <input type="text" id="slip_timing" placeholder="0 Hr" class="txt-teal txt-bold">
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="atc-td-lbl lbl-purple">Driver Price (+)</td>
-                                        <td class="atc-td-val">
-                                            <input type="number" id="slip_dPrice" oninput="calculateSlip()" class="txt-purple txt-bold" placeholder="0">
                                         </td>
                                     </tr>
                                     <tr class="row-pink-highlight">
@@ -343,17 +386,59 @@
                         <!-- Right: Vegetable Basket Graphic -->
                         <div class="atc-veg-graphic">
                             <img src="Images/Background.png" class="atc-basket-img" onerror="this.style.display='none'">
+
+                            <div class="atc-brand-bottom">
+                                <div class="atc-brand-name">ATC &ndash; ALLINDIA TRANSPORT COMPANY</div>
+                                <div class="atc-brand-tag">Your Goods, Our Responsibility &ndash; Delivered Safe &amp; On Time</div>
+
+                                <div class="atc-bank-box">
+                                    <div class="atc-bank-text">
+                                        <div class="atc-bank-title">BANK DETAILS</div>
+                                        <div><span>A/c Name</span> ALLINDIA TRANSPORT COMPANY</div>
+                                        <div><span>A/c No</span> <b>50200111576931</b> (Current)</div>
+                                        <div><span>IFSC</span> <b>HDFC0008604</b></div>
+                                        <div><span>Bank</span> HDFC Bank, Aurangabad</div>
+                                    </div>
+                                    <div class="atc-qr-box">
+                                        <img src="Images/HDFC_QR.png" class="atc-qr-img" onerror="this.style.display='none'">
+                                        <div class="atc-qr-cap">SCAN &amp; PAY</div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Footer: Note & Signatures -->
                     <div class="atc-footer-new">
                         <div class="atc-note-text">
-                            <b>Note :-</b> Inform us of non-receipt within 7 days. Accident/Loss is owner's responsibility. Driver Price is added (+) to balance.
+                            <b>Note :-</b> Inform us of non-receipt within 7 days. Accident/Loss is owner's responsibility. Driver Price is included in Freight Amount and Insurance in Total Freight.
                         </div>
 
                         <div class="atc-sigs-row">
                             <div class="atc-driver-sig">
+                                <div class="atc-web-row">
+                                    <a class="atc-website" href="https://www.atctransport.in" target="_blank" rel="noopener">
+                                        <svg class="atc-web-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#be123c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20z"/></svg>
+                                        <span class="atc-web-text">
+                                            <small>VISIT OUR WEBSITE</small>
+                                            <b>www.atctransport.in</b>
+                                        </span>
+                                    </a>
+                                    <a class="atc-website atc-udyam" href="https://drive.google.com/file/d/1kwNbR9pbgWlw0eCZVKxL88OJpQh4ks6W/view?usp=sharing" target="_blank" rel="noopener">
+                                        <svg class="atc-web-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#c2410c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l8 3v6c0 5-3.5 9-8 11c-4.5-2-8-6-8-11V5z"/><path d="M8.5 12l2.5 2.5l4.5-5"/></svg>
+                                        <span class="atc-web-text">
+                                            <small>UDYAM REGISTRATION</small>
+                                            <b>UDYAM-MH-04-0206156</b>
+                                        </span>
+                                    </a>
+                                    <a class="atc-website atc-tabsol" href="https://www.tabsolution.co.in" target="_blank" rel="noopener">
+                                        <svg class="atc-web-ico" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#0369a1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20a15 15 0 0 1 0-20z"/></svg>
+                                        <span class="atc-web-text">
+                                            <small>TAB SOLUTIONS</small>
+                                            <b>www.tabsolution.co.in</b>
+                                        </span>
+                                    </a>
+                                </div>
                                 <span>Driver Sign.</span>
                             </div>
 
@@ -473,6 +558,12 @@
                     <div class="p-2 rounded mb-3 text-center" style="background: rgba(255,255,255,0.04); font-size: 11.5px; color: #e2e8f0; border: 1px dashed rgba(255,255,255,0.15);">
                         <i class="bi bi-geo-alt-fill text-danger me-1"></i> At Ohar, Jatwada Road, Aurangabad, Maharashtra 431001
                     </div>
+
+                    <!-- 🌐 Website -->
+                    <a href="https://www.tabsolution.co.in" target="_blank" rel="noopener" class="p-2 rounded mb-3 d-block text-center text-decoration-none shadow-sm" style="background: rgba(0,210,255,0.10); border: 1px solid rgba(0,210,255,0.4);">
+                        <small class="text-info d-block fw-bold" style="font-size: 10px; letter-spacing: 1px;"><i class="bi bi-globe me-1"></i> OUR WEBSITE</small>
+                        <span class="text-white fw-bold" style="font-size: 13px;">www.tabsolution.co.in</span>
+                    </a>
 
                     <!-- 🛠️ Services Grid (Exact as your Visiting Card) -->
                     <h6 class="fw-bold text-info mb-2" style="font-size: 11px; letter-spacing: 1px; text-transform: uppercase;">
