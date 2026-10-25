@@ -101,7 +101,16 @@ function doGet(e) {
   }
 }
 
+// Do log ek saath save karein to data aapas me na takraye
 function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try { lock.waitLock(25000); } catch (lockErr) {
+    return jsonResponse({ success: false, error: "Server busy hai, thodi der baad dobara try karein" });
+  }
+  try { return doPostInner(e); } finally { lock.releaseLock(); }
+}
+
+function doPostInner(e) {
   var ss = SpreadsheetApp.openById(SHEET_ID);
   try {
     if (!e || !e.postData || !e.postData.contents) return jsonResponse({ success: false, error: "No post data" });
@@ -134,7 +143,7 @@ function doPost(e) {
       }
 
       var dataForJson = {};
-      for (var k in data) { if (k !== "pdfBase64") dataForJson[k] = data[k]; }
+      for (var k in data) { if (k !== "pdfBase64" && k !== "pass") dataForJson[k] = data[k]; }
       var savedJson = JSON.stringify(dataForJson);
 
       var archiveSheet = ss.getSheetByName("Slip_Archive") || ss.insertSheet("Slip_Archive");
@@ -142,17 +151,20 @@ function doPost(e) {
         archiveSheet.appendRow(["File Name", "File ID", "Date", "File URL", "Form Data"]);
       }
 
+      var savedRow;
       var editRow = parseInt(data.archiveRow);
       if (editRow > 1) {
         var oldFileId = archiveSheet.getRange(editRow, 2).getValue();
         try { if (oldFileId) DriveApp.getFileById(oldFileId).setTrashed(true); } catch (e) {}
         archiveSheet.getRange(editRow, 1, 1, 5).setValues([[fileName, fileId, new Date(), fileUrl, savedJson]]);
+        savedRow = editRow;
       } else {
         archiveSheet.appendRow([fileName, fileId, new Date(), fileUrl, savedJson]);
+        savedRow = archiveSheet.getLastRow();
       }
 
       saveVehicleProfile(ss, data);
-      return jsonResponse({ success: true, fileUrl: fileUrl, fileId: fileId });
+      return jsonResponse({ success: true, fileUrl: fileUrl, fileId: fileId, row: savedRow });
     }
 
   } catch (err) {

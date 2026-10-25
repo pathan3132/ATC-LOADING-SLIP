@@ -50,10 +50,26 @@ function getLocalSlipsCache() {
     } catch(e) { return []; }
 }
 
+// Slip ke formData se bhari cheezein (PDF base64) aur password hata do
+function cleanSlip(slip) {
+    try {
+        if (slip && typeof slip.formData === 'string' &&
+            (slip.formData.indexOf('"pdfBase64"') !== -1 || slip.formData.indexOf('"pass"') !== -1)) {
+            const d = JSON.parse(slip.formData);
+            delete d.pdfBase64;
+            delete d.pass;
+            return Object.assign({}, slip, { formData: JSON.stringify(d) });
+        }
+    } catch (e) {}
+    return slip;
+}
+
 function setLocalSlipsCache(data) {
     if (Array.isArray(data)) {
+        data = data.map(cleanSlip);
         window.currentSlipHistory = data;
-        try { localStorage.setItem('atc_standalone_slips', JSON.stringify(data)); } catch(e) {}
+        try { localStorage.setItem('atc_standalone_slips', JSON.stringify(data)); }
+        catch (e) { console.warn('Local cache full:', e); }
         rebuildSuggestions();
     }
 }
@@ -362,6 +378,7 @@ async function generateBeeltyPDF() {
             advanceBy: document.getElementById('slip_advBy').value,
             driverPrice: rawVal('slip_dPrice'),
             insurance: rawVal('slip_insurance'),
+            totalFreight: rawVal('slip_freight'),
             toPay: rawVal('slip_toPay'),
             timing: document.getElementById('slip_timing').value,
             lorryOwner: document.getElementById('slip_lOwner').value.toUpperCase(),
@@ -383,14 +400,18 @@ async function generateBeeltyPDF() {
         const resData = await response.json();
 
         if (resData && resData.success) {
-            const targetRow = isEditSlip ? parseInt(editArchiveRow) : (window.currentSlipHistory.length > 0 ? Math.max(...window.currentSlipHistory.map(s=>s.rowNumber||0))+1 : 2);
+            const guessedRow = window.currentSlipHistory.length > 0 ? Math.max(...window.currentSlipHistory.map(s => s.rowNumber || 0)) + 1 : 2;
+            const targetRow = isEditSlip ? parseInt(editArchiveRow) : (parseInt(resData.row) > 1 ? parseInt(resData.row) : guessedRow);
+            const savedData = Object.assign({}, payload);
+            delete savedData.pdfBase64;   // bhari PDF data local me nahi rakhna
+            delete savedData.pass;
             const newSlipEntry = {
                 rowNumber: targetRow,
                 name: `Slip_${vNo}_${slipDateVal.replace(/\//g, '-')}.pdf`,
                 id: resData.fileId || "",
                 date: slipDateVal,
                 url: resData.fileUrl || "#",
-                formData: JSON.stringify(payload)
+                formData: JSON.stringify(savedData)
             };
 
             if (isEditSlip) {
@@ -410,7 +431,11 @@ async function generateBeeltyPDF() {
 
     } catch (e) {
         console.error("PDF generation error:", e);
-        alert("PDF Error: " + e.message);
+        if (!navigator.onLine || /fetch|network|load failed/i.test(String(e && e.message))) {
+            alert("⚠️ PDF download ho gaya, lekin slip server par SAVE nahi hui (internet/connection problem).\nInternet check karke dobara FINALIZE dabayein.");
+        } else {
+            alert("PDF Error: " + e.message);
+        }
     } finally {
         if (wrapper && wrapper.parentNode) document.body.removeChild(wrapper);
         btn.disabled = false;
@@ -511,6 +536,11 @@ function editSavedSlip(rowNumber) {
     document.getElementById('slip_archiveRow').value = rowNumber;
 
     calculateSlip();
+    // Agar Total Freight haath se likha gaya tha to wahi wapas laao
+    if (d.totalFreight !== undefined && d.totalFreight !== '' && stripNum(d.totalFreight) !== rawVal('slip_freight')) {
+        document.getElementById('slip_freight').value = d.totalFreight;
+        updateFinalNetPayable();
+    }
     document.getElementById('receipt-to-print').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
@@ -526,9 +556,11 @@ function shareSlipWhatsApp(rowNumber) {
     const from = d.from || "N/A";
     const to = d.to || "N/A";
     const party = d.partyName || "N/A";
-    const toPay = d.toPay || "0";
-    const advAmt = parseFloat(d.advance) || 0;
-    const advLine = advAmt > 0 ? `\n💵 Advance: ₹${advAmt} (${d.advanceBy === 'ATC' ? 'ATC ne diya' : 'Party ne diya'})` : "";
+    const toPay = fmtIN(d.toPay || "0");
+    const advAmt = parseFloat(stripNum(d.advance)) || 0;
+    const totalFrt = parseFloat(stripNum(d.totalFreight)) || 0;
+    const frtLine = totalFrt > 0 ? `\n📦 Total Freight: ₹${fmtIN(totalFrt)}` : "";
+    const advLine = advAmt > 0 ? `\n💵 Advance: ₹${fmtIN(advAmt)} (${d.advanceBy === 'ATC' ? 'ATC ne diya' : 'Party ne diya'})` : "";
     const pdfUrl = (slip.url && slip.url !== '#' && slip.url !== '') ? slip.url : "";
 
     let targetPhone = d.ownerMob || d.driverMob || "";
@@ -540,7 +572,7 @@ _Vegetable Suppliers - Loading Slip_
 🚚 Vehicle: *${vNo}*
 📅 Date: ${tDate}
 🛣️ Route: ${from} ➔ ${to}
-🏢 Party: ${party}${advLine}
+🏢 Party: ${party}${frtLine}${advLine}
 
 💰 *NET PAYABLE (TO PAY): ₹${toPay}*
 ${pdfUrl ? `\n📄 *BEELTY PDF LINK:*\n${pdfUrl}\n` : ''}==========================

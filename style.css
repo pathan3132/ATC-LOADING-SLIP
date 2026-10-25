@@ -1058,7 +1058,7 @@ input[type=number] {
     justify-content: flex-start !important;
     padding: 0 !important;
 }
-.atc-split-section .atc-basket-img { width: 84% !important; max-height: 215px; object-fit: contain; margin-top: -4px; }
+.atc-split-section .atc-basket-img { width: 104% !important; max-height: 240px; object-fit: contain; margin-top: 10px; }
 
 .atc-brand-bottom { width: 100%; margin-top: auto; text-align: center; }
 .atc-brand-name {
@@ -1188,3 +1188,105 @@ a.atc-website .atc-web-text b { font-size: 11.5px !important; letter-spacing: 0 
 
 /* PDF render bug fix: inputs me letter-spacing na ho (html2canvas sirf pehla akshar dikhata hai) */
 .atc-math-table input { letter-spacing: normal !important; }
+
+
+/* ================= 🍎 SERVICES RIBBON ================= */
+.atc-services-strip {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 6px 0 8px; padding: 6px 12px;
+    background: linear-gradient(90deg, #f0fdf4, #fff7ed, #f0fdf4);
+    border: 1.5px dashed #16a34a; border-radius: 10px;
+    text-align: center; line-height: 1.3;
+}
+.atc-services-strip .svc-ico { font-size: 16px; letter-spacing: 1px; flex: 0 0 auto; }
+.atc-services-strip .svc-text { font-size: 11.5px; font-weight: 700; color: #14532d; }
+.atc-services-strip .svc-text b { color: #be123c; font-weight: 900; }
+
+
+/* ================= 🆕 SERVICES LINE (header ke neeche) + CONTACT STRIP (address ke upar) ================= */
+.atc-services-strip { margin: 6px 0 8px; padding: 5px 12px; gap: 8px; }
+.atc-services-strip .svc-text { font-size: 11.5px; line-height: 1.35; }
+
+.atc-contact-strip { display: flex; justify-content: center; gap: 14px; margin: 4px 0 8px; }
+a.ct-pill {
+    display: inline-flex; align-items: center; gap: 8px; text-decoration: none !important;
+    padding: 4px 18px 4px 10px; border-radius: 999px; border: 1.5px solid; min-width: 190px; justify-content: center;
+}
+a.ct-call { border-color: #be123c; background: #fff1f2; }
+a.ct-wa   { border-color: #16a34a; background: #f0fdf4; }
+.ct-ico { flex: 0 0 17px; display: block; }
+.ct-text { display: flex; flex-direction: column; line-height: 1.15; text-align: left; }
+.ct-text small { font-size: 7.5px; font-weight: 800; letter-spacing: 0.8px; }
+.ct-text b { font-size: 14px; font-weight: 900; letter-spacing: normal; }
+a.ct-call .ct-text small { color: #9f1239; } a.ct-call .ct-text b { color: #be123c; }
+a.ct-wa   .ct-text small { color: #166534; } a.ct-wa   .ct-text b { color: #15803d; }
+
+
+/* ================= 🏷️ SERVICES + INSURANCE + CONTACT BLOCK ================= */
+.atc-svc-box {
+    display: flex; align-items: stretch; gap: 10px; margin: 6px 0 8px; padding: 6px 10px;
+    background: linear-gradient(90deg, #f0fdf4, #fffbeb);
+    border: 1.5px solid #16a34a; border-radius: 10px;
+}
+.atc-svc-box .svc-left { flex: 1 1 auto; min-width: 0; }
+.atc-svc-box .svc-right { flex: 0 0 auto; display: flex; flex-direction: column; justify-content: center; gap: 5px; border-left: 1.5px dashed #86efac; padding-left: 10px; }
+.atc-svc-box .svc-hi { font-family: 'Noto Sans Devanagari', 'Mangal', 'Nirmala UI', sans-serif; font-size: 10.5px; font-weight: 700; color: #14532d; line-height: 1.4; }
+.atc-svc-box .svc-en { font-size: 9.5px; font-weight: 600; color: #1f2937; line-height: 1.35; margin-top: 2px; }
+.atc-svc-box .svc-insurers { display: flex; flex-wrap: wrap; gap: 3px 4px; margin-top: 4px; }
+.atc-svc-box .svc-insurers span {
+    font-size: 8px; font-weight: 800; color: #0369a1; background: #fff;
+    border: 1px solid #7cc4ee; border-radius: 999px; padding: 0 7px; line-height: 1.5; white-space: nowrap;
+}
+.atc-svc-box a.ct-pill { min-width: 150px; padding: 3px 12px 3px 8px; }
+.atc-svc-box .ct-text b { font-size: 13px; }
+
+
+/* ===== Services block: chhota / compact ===== */
+.atc-svc-box { margin: 4px 0 6px !important; padding: 4px 8px !important; gap: 8px !important; }
+.atc-svc-box .svc-hi { font-size: 10px !important; line-height: 1.3 !important; }
+.atc-svc-box .svc-en { font-size: 9px !important; line-height: 1.25 !important; margin-top: 1px !important; }
+.atc-svc-box .svc-insurers { margin-top: 3px !important; flex-wrap: nowrap !important; gap: 3px !important; }
+.atc-svc-box .svc-insurers span { font-size: 7.5px !important; padding: 0 6px !important; line-height: 1.45 !important; }
+.atc-svc-box .svc-right { flex-direction: row !important; gap: 6px !important; padding-left: 8px !important; }
+.atc-svc-box a.ct-pill { min-width: 0 !important; padding: 2px 9px 2px 6px !important; gap: 5px !important; }
+.atc-svc-box .ct-text b { font-size: 11.5px !important; }
+.atc-svc-box .ct-text small { font-size: 6.5px !important; }
+.atc-svc-box .ct-ico { width: 14px; height: 14px; flex: 0 0 14px; }
+
+
+/* ===== Services block: saaf-suthra final look ===== */
+.atc-svc-box {
+    background: #f7fdf9 !important; border: 1.5px solid #16a34a !important; border-radius: 8px !important;
+    padding: 5px 8px !important; gap: 10px !important; align-items: center !important;
+}
+.atc-svc-box .svc-hi { font-size: 10.5px !important; font-weight: 700 !important; color: #14532d !important; }
+.atc-svc-box .svc-en { font-size: 9.5px !important; font-weight: 600 !important; color: #374151 !important; }
+.atc-svc-box .svc-insurers { gap: 4px !important; margin-top: 4px !important; }
+.atc-svc-box .svc-insurers span {
+    font-size: 8.5px !important; padding: 1px 8px !important; border-radius: 4px !important;
+    background: #eff6ff !important; border: 1px solid #93c5fd !important; color: #1d4ed8 !important;
+}
+.atc-svc-box .svc-right {
+    flex-direction: column !important; gap: 4px !important;
+    border-left: 1.5px solid #bbf7d0 !important; padding-left: 10px !important;
+}
+.atc-svc-box a.ct-pill {
+    border-radius: 6px !important; border-width: 1.2px !important;
+    width: 138px; min-width: 138px !important; justify-content: flex-start !important;
+    padding: 2px 8px !important; gap: 6px !important;
+}
+.atc-svc-box .ct-text b { font-size: 12.5px !important; }
+.atc-svc-box .ct-text small { font-size: 6.5px !important; }
+
+
+/* ===== Feature badges (hare) + insurer badges (neele) ===== */
+.atc-svc-box .svc-insurers { flex-wrap: wrap !important; align-items: center; }
+.atc-svc-box .svc-insurers span.feat {
+    background: #dcfce7 !important; border: 1px solid #4ade80 !important; color: #166534 !important;
+    font-weight: 900 !important;
+}
+.atc-svc-box .svc-insurers span.feat::before { content: "\2713\00a0"; }
+
+
+/* ===== Services lines: red text ===== */
+.atc-svc-box .svc-hi, .atc-svc-box .svc-en { color: #d90429 !important; font-weight: 800 !important; }
