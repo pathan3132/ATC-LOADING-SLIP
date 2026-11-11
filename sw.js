@@ -1,7 +1,7 @@
 // ATC Loading Slip – Service Worker
-// Naya version deploy karne par: sirf CACHE_NAME ka number badha do (v10 -> v11 ...).
+// Naya version deploy karne par: sirf CACHE_NAME ka number badha do (v12 -> v13 ...).
 // Users ko "Update Karein" button dikhega; button dabate hi naya version chalu ho jaata hai.
-const CACHE_NAME = 'atc-app-v10';
+const CACHE_NAME = 'atc-app-v12';
 const OLD_AUTO_VERSIONS = ['atc-app-v7', 'atc-app-v8', 'atc-app-v9']; // button se pehle wale versions
 const urlsToCache = [
   './index.html',

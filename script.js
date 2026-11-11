@@ -181,6 +181,7 @@ function updateFinalNetPayable() {
     let toPay = freight - adv;   // Driver Price Freight Amount me aur Insurance Total Freight me pehle se shamil hai
     document.getElementById('slip_toPay').value = toPay > 0 ? Math.round(toPay) : (toPay === 0 ? "0" : Math.round(toPay));
     formatAllAmounts();
+    updateAmountWords();
 }
 // ================= VEHICLE SEARCH & AUTO-FILL =================
 async function loadVehicleListForSlip() {
@@ -265,6 +266,134 @@ async function autoFillOwnerDriver(vNo) {
     }
 }
 
+
+// ================= 🔐 AMOUNT IN WORDS (Indian system) =================
+const _ONES = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve',
+    'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+const _TENS = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+function _below100(n) {
+    if (n < 20) return _ONES[n];
+    return _TENS[Math.floor(n / 10)] + (n % 10 ? ' ' + _ONES[n % 10] : '');
+}
+function _below1000(n) {
+    let s = '';
+    if (n >= 100) { s = _ONES[Math.floor(n / 100)] + ' Hundred'; n = n % 100; if (n) s += ' '; }
+    return s + (n ? _below100(n) : '');
+}
+function numberToWordsIN(num) {
+    let n = Math.round(Number(num) || 0);
+    if (n === 0) return 'Zero';
+    const neg = n < 0; n = Math.abs(n);
+    const parts = [];
+    const crore = Math.floor(n / 10000000); n %= 10000000;
+    const lakh = Math.floor(n / 100000);   n %= 100000;
+    const thou = Math.floor(n / 1000);     n %= 1000;
+    if (crore) parts.push(numberToWordsIN(crore) + ' Crore');
+    if (lakh)  parts.push(_below100(lakh) + ' Lakh');
+    if (thou)  parts.push(_below100(thou) + ' Thousand');
+    if (n)     parts.push(_below1000(n));
+    return (neg ? 'Minus ' : '') + parts.join(' ');
+}
+function amountInWords(num) {
+    return ('Rupees ' + numberToWordsIN(num) + ' Only').toUpperCase();
+}
+
+// Slip par Total Freight aur To Pay shabdon me dikhao (1 line me, zarurat par font chhota)
+function updateAmountWords() {
+    const set = (id, val) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = val;
+        el.style.whiteSpace = 'nowrap';
+        let fs = 9.5;
+        el.style.fontSize = fs + 'px';
+        if (el.clientWidth > 0) {
+            while (el.scrollWidth > el.clientWidth + 1 && fs > 6.5) { fs -= 0.5; el.style.fontSize = fs + 'px'; }
+            if (el.scrollWidth > el.clientWidth + 1) el.style.whiteSpace = 'normal';   // phir bhi na aaye to 2 line
+        }
+    };
+    set('words_freight', amountInWords(numVal('slip_freight') || 0));
+    set('words_toPay', amountInWords(numVal('slip_toPay') || 0));
+}
+
+// ================= 🔐 BACKGROUND PATTERN + WATERMARK (sirf PDF me) =================
+// Design: note/cheque jaisa "security paper" -> bareek lehrdaar lines + beech me halka ATC logo
+// + upar/neeche microtext (Vehicle No, Date, Time). Slip me kuch mita kar likhne par pattern toota dikhta hai.
+function _loadImg(src) {
+    return new Promise(res => {
+        const im = new Image();
+        const t = setTimeout(() => res(null), 2500);
+        im.onload = () => { clearTimeout(t); res(im); };
+        im.onerror = () => { clearTimeout(t); res(null); };
+        im.src = src;
+    });
+}
+
+async function buildWatermarkDataURL(w, h, vNo, dateStr) {
+    const S = 2;
+    const c = document.createElement('canvas');
+    c.width = w * S; c.height = h * S;
+    const ctx = c.getContext('2d');
+    ctx.scale(S, S);
+
+    // 1) Lehrdaar lines (guilloche) - do rang ki, alag frequency => moiré jaisa design
+    const waves = (color, lw, step, amp, freq, phaseStep) => {
+        ctx.strokeStyle = color; ctx.lineWidth = lw;
+        let k = 0;
+        for (let y0 = -10; y0 <= h + 10; y0 += step, k++) {
+            ctx.beginPath();
+            for (let x = 0; x <= w; x += 4) {
+                const y = y0 + amp * Math.sin(x * freq + k * phaseStep) + (amp * 0.5) * Math.sin(x * freq * 2.3 + k * 0.35);
+                if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+    };
+    waves('rgba(194, 24, 91, 0.075)', 0.5, 6, 5, 0.022, 0.22);
+    waves('rgba(11, 61, 145, 0.060)', 0.5, 9, 4, 0.031, 0.31);
+
+    // 2) Beech me halka ATC logo (na mile to ATC text)
+    const logo = await _loadImg('Images/ATC_Logo.png');
+    ctx.save();
+    ctx.globalAlpha = 0.10;
+    if (logo && logo.width) {
+        const lw = Math.min(380, w * 0.5);
+        const lh = lw * (logo.height / logo.width);
+        ctx.drawImage(logo, (w - lw) / 2, (h - lh) / 2, lw, lh);
+    } else {
+        ctx.fillStyle = '#c2185b';
+        ctx.font = '900 190px Arial, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('ATC', w / 2, h / 2);
+    }
+    ctx.restore();
+
+    // 3) Microtext lines (upar-neeche + beech ke kinare) - bahut bareek, zoom karne par padhne me aata hai
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const stamp = pad(now.getDate()) + '-' + pad(now.getMonth() + 1) + '-' + now.getFullYear() + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    const unit = 'ATC ALLINDIA TRANSPORT COMPANY  \u2022  ' + String(vNo || '') + '  \u2022  ' + String(dateStr || '') + '  \u2022  ' + stamp + '  \u2022  ';
+    ctx.font = '600 5px Arial, sans-serif';
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(122, 14, 58, 0.55)';
+    const rep = unit.repeat(Math.ceil(w / (unit.length * 2.6)) + 1);
+    [7, h - 8].forEach(y => ctx.fillText(rep, 8, y));
+
+    return c.toDataURL('image/png');
+}
+
+// Amount wala khaas font PDF banne se pehle load ho jaye
+async function ensureAmountFontLoaded() {
+    try {
+        if (!document.fonts || !document.fonts.load) return;
+        await Promise.race([
+            Promise.all([document.fonts.load('700 16px "Chakra Petch"'), document.fonts.load('600 11px "Chakra Petch"')]),
+            new Promise(res => setTimeout(res, 3000))
+        ]);
+    } catch (e) {}
+}
+
 // ================= PDF GENERATION & GOOGLE DRIVE SAVE =================
 // --- PERFECT ZERO-CUT BEELTY PDF GENERATOR (WITH FULL ADDRESS BAR) ---
 async function generateBeeltyPDF() {
@@ -276,6 +405,9 @@ async function generateBeeltyPDF() {
 
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generating PDF & Saving...';
+
+    updateAmountWords();
+    await ensureAmountFontLoaded();
 
     // 1. Inputs DOM attribute sync
     const allInputs = originalElement.querySelectorAll('input');
@@ -307,6 +439,19 @@ async function generateBeeltyPDF() {
     wrapper.appendChild(clone);
     document.body.appendChild(wrapper);
     window.scrollTo(0, 0);
+
+    // 🔐 Background pattern + watermark overlay
+    try {
+        clone.style.setProperty('position', 'relative', 'important');
+        const wmH = Math.ceil(clone.offsetHeight);
+        const wmUrl = await buildWatermarkDataURL(794, wmH, vNo, document.getElementById('slip_date').value || getTodayDateFormatted());
+        const wm = document.createElement('div');
+        wm.setAttribute('aria-hidden', 'true');
+        wm.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:50;' +
+            'background-repeat:no-repeat;background-size:100% 100%;background-image:url(' +
+            wmUrl + ');';
+        clone.appendChild(wm);
+    } catch (wmErr) { console.warn('Watermark skip:', wmErr); }
 
     // PDF me clickable links ke liye positions pehle hi note kar lo
     const linkRects = [];
@@ -380,6 +525,8 @@ async function generateBeeltyPDF() {
             insurance: rawVal('slip_insurance'),
             totalFreight: rawVal('slip_freight'),
             toPay: rawVal('slip_toPay'),
+            totalFreightWords: amountInWords(numVal('slip_freight')),
+            toPayWords: amountInWords(numVal('slip_toPay')),
             timing: document.getElementById('slip_timing').value,
             lorryOwner: document.getElementById('slip_lOwner').value.toUpperCase(),
             ownerVillage: document.getElementById('slip_oVillage').value.toUpperCase(),
